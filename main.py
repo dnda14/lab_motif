@@ -1,6 +1,3 @@
-import os
-import time
-import tracemalloc
 import kmer_analyzer
 import visualizador
 from collections import Counter,defaultdict
@@ -28,6 +25,23 @@ def analiz_seq(seq, k_values, prefix):
             
     return results
 
+def rellenar(subsecuencia,secuencia,pos):
+    lon = len(secuencia)
+    lon_sub = len(subsecuencia)
+    prefijo = "."*pos
+    sufijo = "."*(lon-(lon_sub+pos))
+    
+    return prefijo +subsecuencia +sufijo
+    
+def determinar_posiciones(set_secuencias,lista_candidatos):
+    for k,v in set_secuencias.items():
+        print(k+":")
+        print(v)
+        for i in lista_candidatos:
+            pos = v.find(i[0])
+            print(rellenar(i[0],v,pos))
+            
+            
 def main():
     
     set_secuencias={"S1" : "ATCGTACGATGACCTGATCG",
@@ -40,11 +54,13 @@ def main():
                     "S8" : "TCGATACGATGACTGGCAAT",
                     "S9" : "AGGCTACGATGACATTCGGA",
                     "S10" : "CCTATACGATGACGGAATTC"}
-    
-    
+
     k_values = [7, 8, 9]
     
     lista_resultados = []
+    #---------
+    # pregunta 2 : kmers candidatos
+    #---------
     for k,v in set_secuencias.items():
         lista_resultados.append(analiz_seq(v, k_values, k))
     
@@ -54,9 +70,29 @@ def main():
     visualizador.plot_top_kmers(set_frecuencias_seq_globales[8], top_n=20,output_archivo=f"histogramas/{8}_top_frec_k{8}.png" , titulo="Top 8-mers")
     visualizador.plot_top_kmers(set_frecuencias_seq_globales[9], top_n=20,output_archivo=f"histogramas/{9}_top_frec_k{9}.png" , titulo="Top 9-mers")
     
-    set_frecuencias_seq_globales[7].most_common()
-    set_frecuencias_seq_globales[8].most_common()
-    set_frecuencias_seq_globales[9].most_common()
+    #visualmente se ven 6 candidatos(3 en 7mer, 2 en 8mer y 1 en 9mer) todos con presencia en las 10 secuencias, las otros posibles candidatos tienen solo  prsencia en 4 secuencias en todos los 3 kmern disponibles.
+    lista_candidatos = []
+    
+    lista_candidatos+=set_frecuencias_seq_globales[7].most_common(4)
+    lista_candidatos+=set_frecuencias_seq_globales[8].most_common(3)
+    lista_candidatos+=set_frecuencias_seq_globales[9].most_common(2)
+    
+    #print(lista_candidatos)
+    
+    #-------
+    # pregunta 3: localizar ocurrencias
+    #--------
+    determinar_posiciones(set_secuencias,lista_candidatos)
 
+    
+    #-------
+    # pregunta 4: extraer region conservada 
+    #--------
+    # par ala extraccion de la region se considera un rango maximo que tengan en comun todas las secuencias, ene este caso un rango con el k = 9, como es es unico se tomara ese kmer como la regiona conservada
+    
+    #tomaremos los 12 priemros de cada secuencia, porque ahi se ve un mayor peso de freceuncias de subsecuecnias similares entre las 10 seceuncias.
+    
+    
+    
 if __name__ == "__main__":
     main()
