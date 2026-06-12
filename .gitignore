@@ -1,0 +1,4 @@
+venv/
+cleanup_pngs.py
+__pycache__/
+histogramas/*.png
