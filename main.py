@@ -1,9 +1,10 @@
 import kmer_analyzer
 import visualizador
 from collections import Counter,defaultdict
+import alineacion_multiple
 
 set_frecuencias_seq_globales=defaultdict(Counter)
-results = []
+
 def analiz_seq(seq, k_values, prefix):
     
     if not seq:
@@ -23,7 +24,6 @@ def analiz_seq(seq, k_values, prefix):
                 
         visualizador.plot_top_kmers(kmer_counts, top_n=20,output_archivo=f"histogramas/{prefix}_histograma_k{k}.png" , titulo="Top K-mers")
             
-    return results
 
 def rellenar(subsecuencia,secuencia,pos):
     lon = len(secuencia)
@@ -64,12 +64,11 @@ def main():
 
     k_values = [7, 8, 9]
     
-    lista_resultados = []
     #---------
     # pregunta 2 : kmers candidatos
     #---------
     for k,v in set_secuencias.items():
-        lista_resultados.append(analiz_seq(v, k_values, k))
+        analiz_seq(v, k_values, k)
     
     #print(set_frecuencias_seq_globales)
     
@@ -99,11 +98,19 @@ def main():
     
     #tomaremos una region en comun donde se contenga las secuencias en comun entre los 10 y entre 4, porque ahi se ve un mayor peso de freceuncias de subsecuecnias similares entre las 10 seceuncias.
     
+    set_regiones =[]
     print(f"la region abarca entre el indice{i_region} y {f_region}")
     
     for k,v in set_secuencias.items():
-        print(k+" :",end='')
+        set_regiones.append((k+'_r',v[i_region:f_region]))
+        print(k+" :",end='\t')
         print(v[i_region:f_region])
+        
+    #-------
+    # pregunta 5:alineamiento multiple 
+    #--------
+    
+    alineacion_multiple.run_alineacion(set_regiones)
     
     
 if __name__ == "__main__":

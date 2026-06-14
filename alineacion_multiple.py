@@ -1,21 +1,7 @@
-"""
-Alineación de Múltiples Secuencias (MSA)
-Implementación con:
-  - Needleman-Wunsch modificado (soporte para X)
-  - Árbol guía UPGMA
-  - Fusión progresiva de secuencias
-"""
+
 
 import numpy as np
 
-def leer(filename):
-    with open(filename, mode='r') as f:
-        lines = f.readlines()
-    if not lines: return ""
-    if lines[0].startswith('>'):
-        return "".join(line.strip() for line in lines[1:])
-    else:
-        return lines[0].strip()
         
 # ─────────────────────────────────────────────
 # 1. NEEDLEMAN-WUNSCH MODIFICADO (con X)
@@ -80,21 +66,21 @@ def needleman_wunsch(seq1: list, seq2: list, gap_penalty: int = 1) -> tuple:
 
 
 # ─────────────────────────────────────────────
-# 2. DISTANCIA ENTRE SECUENCIAS / GRUPOS
+# 2. DISTANCIA ENTRE SECUENCIAS 
 # ─────────────────────────────────────────────
 
-def seq_distance(s1: list, s2: list) -> float:
+def distancia_seq(s1: list, s2: list) -> float:
     """Distancia NW normalizada entre dos secuencias."""
     score, _, _ = needleman_wunsch(s1, s2)
     return score
 
 
-def group_distance_to_seq(group: list[list], seq: list) -> float:
+def grupo_distancia_seq(group: list[list], seq: list) -> float:
     """
     Distancia de una secuencia a un grupo (media de distancias individuales).
     Usa NW modificado con soporte X.
     """
-    dists = [seq_distance(member, seq) for member in group]
+    dists = [distancia_seq(member, seq) for member in group]
     return sum(dists) / len(dists)
 
 
@@ -103,7 +89,7 @@ def group_distance(g1: list[list], g2: list[list]) -> float:
     total, count = 0, 0
     for s1 in g1:
         for s2 in g2:
-            total += seq_distance(s1, s2)
+            total += distancia_seq(s1, s2)
             count += 1
     return total / count if count else 0
 
@@ -112,7 +98,7 @@ def group_distance(g1: list[list], g2: list[list]) -> float:
 # 3. CONSTRUCCIÓN DEL ÁRBOL GUÍA (UPGMA)
 # ─────────────────────────────────────────────
 
-def build_guide_tree(sequences: list[list], names: list[str]) -> list:
+def build_arbol_guia(sequences: list[list], names: list[str]) -> list:
     """
     Construye el árbol guía usando UPGMA con NW.
     Retorna lista de pasos de fusión: [(nombre_grupo, dist, idx_i, idx_j), ...]
@@ -309,7 +295,7 @@ def _insert_gaps(seq: list, gap_positions: list[int]) -> list:
     return result
 
 
-def progressive_alignment(sequences: list[list], names: list[str],
+def alineamiento_progresivo(sequences: list[list], names: list[str],
                            merge_steps: list) -> list[list]:
     """
     Fusiona secuencias siguiendo el árbol guía.
@@ -386,10 +372,10 @@ def multiple_sequence_alignment(sequences: list[str],
         print(f"  {name:>6}: {seq.upper()}")
 
     # 1. Árbol guía
-    merge_steps = build_guide_tree(seq_lists, names)
+    merge_steps = build_arbol_guia(seq_lists, names)
 
     # 2. Alineación progresiva
-    aligned_groups = progressive_alignment(seq_lists, names, merge_steps)
+    aligned_groups = alineamiento_progresivo(seq_lists, names, merge_steps)
 
     # 3. Obtener orden original de secuencias
     leaf_order = _get_leaf_names(merge_steps[-1]['name'], merge_steps, names)
@@ -424,41 +410,13 @@ def multiple_sequence_alignment(sequences: list[str],
 
     return clean
 
-
-# ─────────────────────────────────────────────
-# 6. PRUEBA
-# ─────────────────────────────────────────────
-
-if __name__ == "__main__":
-    import sys
-    import os
-
-    INPUT_FOLDER = "muestras/"
-    OUTPUT_FILE = "msa_resultados.txt"
-    seqs  = []
-    archivos = os.listdir(INPUT_FOLDER)
-    for i in archivos:
-        seqs.append(leer(INPUT_FOLDER+i))
-    
-    seqs2 = ["ATTGGCACCA","ATTTGGACCA","TGGTTCCA","ATTCCACCAC"]
-    # Redirigir toda la salida estándar al archivo .txt
+def run_alineacion(set_secuencias):
+    seqs, nombres = map(list, zip(*set_secuencias))
+    OUTPUT_FILE = "histogramas/msa_resultados.txt"
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        sys.stdout = f
-
         print("#"*60)
         print(" ALINEAMIENTO MULTIPLE")
         print("#"*60)
-        names1 = ["S1", "S2", "S3", "S4","S5"]
-        steps_tree = build_guide_tree(seqs, names1)
-        result1 = multiple_sequence_alignment(seqs, names1)
+        result1 = multiple_sequence_alignment(seqs, nombres)
+        steps_tree = build_arbol_guia(seqs, nombres)
 
-
-    # Restaurar stdout y confirmar
-    sys.stdout = sys.__stdout__
-    
-    # Fuera del "with open" (para que no se rompa la interfaz gráfica de matplotlib):
-    try:
-        draw_tree(steps_tree, names1)
-    except ImportError:
-        print("Error al generar el gráfico en PNG.")
-    print(f"Resultados guardados en: {OUTPUT_FILE}")
