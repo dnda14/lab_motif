@@ -8,7 +8,7 @@ def contar_km(seq, k):
         kmer_counts[kmer] += 1
     return kmer_counts
 
-def estadisticas(kmer_counts):
+""" def estadisticas(kmer_counts):
     total_kmers = sum(kmer_counts.values())
     unico = len(kmer_counts)
     
@@ -18,5 +18,5 @@ def estadisticas(kmer_counts):
     mas_freq = kmer_counts.most_common(1)[0]
     menos_frec = kmer_counts.most_common()[-1] 
     
-    return total_kmers, unico, mas_freq, menos_frec
+    return total_kmers, unico, mas_freq, menos_frec """
 
