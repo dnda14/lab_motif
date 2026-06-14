@@ -110,7 +110,32 @@ def main():
     # pregunta 5:alineamiento multiple 
     #--------
     
-    alineacion_multiple.run_alineacion(set_regiones)
+    resultado_alineacion =alineacion_multiple.run_alineacion(set_regiones)
+    
+    #-------
+    # pregunta 6: matriz de recuecnias
+    #--------
+    
+    matriz_frec = {}
+    for i in resultado_alineacion:
+        for j in range(len(i)):
+            if j in matriz_frec:
+                matriz_frec[j].add(i[j])
+            else:
+                matriz_frec[j]={i[j]}
+    #print(matriz_frec)
+    
+    for k,v in matriz_frec.items():
+        print(f"{k}\t|  {v}")
+    
+    #----------
+    # pregunta  7: secuencia consenso
+    #--------
+    consenso=""
+    for v in matriz_frec.values():
+        consenso+=''.join(['[']+list(v)+[']']if len(list(v))>1 else v)
+    print(consenso)
+        
     
     
 if __name__ == "__main__":

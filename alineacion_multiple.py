@@ -1,5 +1,5 @@
 
-
+import sys
 import numpy as np
 
         
@@ -354,12 +354,9 @@ def _get_leaf_names(node: str, merge_steps: list, original_names: list) -> list[
 # 5. PIPELINE COMPLETO
 # ─────────────────────────────────────────────
 
-def multiple_sequence_alignment(sequences: list[str],
+def alineacion_multiple(sequences: list[str],
                                  names: list[str] = None) -> list[str]:
-    """
-    Alineación de múltiples secuencias completa.
-    Retorna lista de secuencias alineadas (sin X).
-    """
+   
     if names is None or len(names) != len(sequences):
         names = [f"S{i+1}" for i in range(len(sequences))]
 
@@ -375,17 +372,17 @@ def multiple_sequence_alignment(sequences: list[str],
     merge_steps = build_arbol_guia(seq_lists, names)
 
     # 2. Alineación progresiva
-    aligned_groups = alineamiento_progresivo(seq_lists, names, merge_steps)
+    grupos_alineados = alineamiento_progresivo(seq_lists, names, merge_steps)
 
     # 3. Obtener orden original de secuencias
     leaf_order = _get_leaf_names(merge_steps[-1]['name'], merge_steps, names)
-    name_to_aligned = {name: seq for name, seq in zip(leaf_order, aligned_groups)}
+    name_to_aligned = {name: seq for name, seq in zip(leaf_order, grupos_alineados)}
 
     # 4. Mostrar resultados con X
     print("\n" + "="*60)
     print("  ALINEACIÓN FINAL (con X internos)")
     print("="*60)
-    max_len = max(len(s) for s in aligned_groups)
+    max_len = max(len(s) for s in grupos_alineados)
     for name in names:
         seq = name_to_aligned.get(name, [])
         while len(seq) < max_len:
@@ -410,13 +407,19 @@ def multiple_sequence_alignment(sequences: list[str],
 
     return clean
 
-def run_alineacion(set_secuencias):
-    seqs, nombres = map(list, zip(*set_secuencias))
+def run_alineacion(set_regiones):
+    nombres, seqs = map(list, zip(*set_regiones))
     OUTPUT_FILE = "histogramas/msa_resultados.txt"
+    salida_original =sys.stdout
+    
+    resultado_alineacion=[]
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        sys.stdout = f
         print("#"*60)
         print(" ALINEAMIENTO MULTIPLE")
         print("#"*60)
-        result1 = multiple_sequence_alignment(seqs, nombres)
-        steps_tree = build_arbol_guia(seqs, nombres)
-
+        resultado_alineacion = alineacion_multiple(seqs, nombres)
+        
+        sys.stdout = salida_original
+        #print(resultado_alineacion)
+    return resultado_alineacion
