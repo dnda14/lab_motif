@@ -91,24 +91,106 @@ def rellenar(subsecuencia,secuencia,pos):
     return prefijo +subsecuencia +sufijo
     
 def determinar_posiciones(set_secuencias,lista_candidatos):
-    rangos_por_secuencia = {}
-    for k,v in set_secuencias.items():
-        print(k+":")
-        print(v)
-        i_seq = len(v)
-        f_seq = -1
-        for i in lista_candidatos:
-            pos = v.find(i[0])
-            if pos>=0:
-                i_seq=min(i_seq,pos)
-                f_seq=max(f_seq,pos+len(i[0]))
-                print(rellenar(i[0],v,pos))
-        
-        if f_seq != -1:
-            rangos_por_secuencia[k] = (i_seq, f_seq)
-        else:
-            rangos_por_secuencia[k] = (0, len(v))
+    """
+    Selecciona la mejor posición evaluando k-mers individualmente.
+    1. Para cada k-mer, calcula su mediana global.
+    2. En cada secuencia, escoge la 1 posición más cercana a esa mediana.
+    3. Calcula la dispersión (Desv. Est.) solo de esas posiciones filtradas.
+    4. Elige el k-mer con menor dispersión como el verdadero motif.
+    """
+    import statistics
     
+    print(f"\n{'='*60}")
+    print(f"  ANÁLISIS DE DISPERSIÓN POR K-MER (1 Hit por Secuencia)")
+    print(f"{'='*60}")
+    print(f"  {'K-mer':<15} | {'Mediana':<10} | {'Dispersión (Stdev)':<20} | {'Seq_Hits'}")
+    print(f"  {'-'*70}")
+
+    estadisticas_kmers = [] # Guardará (kmer, dispersion, mejores_pos_por_seq, mediana)
+
+    for kmer, _ in lista_candidatos:
+        # 1. Encontrar TODAS las posiciones de este k-mer
+        todas_pos = []
+        pos_por_seq_raw = {}
+        for k, v in set_secuencias.items():
+            posiciones = []
+            inicio = 0
+            while True:
+                pos = v.find(kmer, inicio)
+                if pos == -1: break
+                posiciones.append(pos)
+                todas_pos.append(pos)
+                inicio = pos + 1
+            pos_por_seq_raw[k] = posiciones
+
+        if not todas_pos:
+            continue
+            
+        # Mediana inicial cruda para este k-mer
+        mediana_cruda = statistics.median(todas_pos) #cambiar a mean si se requiere
+
+        # 2. Elegir 1 sola posición por secuencia (la más cercana a la mediana cruda)
+        posiciones_filtradas = []
+        pos_elegida_por_seq = {}
+        
+        for k, posiciones in pos_por_seq_raw.items():
+            if posiciones:
+                mejor_pos = min(posiciones, key=lambda p: abs(p - mediana_cruda))
+                posiciones_filtradas.append(mejor_pos)
+                pos_elegida_por_seq[k] = mejor_pos
+        
+        # 3. Calcular la dispersión final de este k-mer con las posiciones filtradas
+        n_hits = len(posiciones_filtradas)
+        if n_hits > 1:
+            mediana_final = statistics.median(posiciones_filtradas)# cambiar a mean si e requiere
+            dispersion = statistics.stdev(posiciones_filtradas)
+        elif n_hits == 1:
+            mediana_final = posiciones_filtradas[0]
+            dispersion = 0.0
+        else:
+            continue
+            
+        print(f"  {kmer:<15} | {mediana_final:<10.1f} | {dispersion:<20.2f} | n={n_hits}")
+        estadisticas_kmers.append({
+            'kmer': kmer,
+            'dispersion': dispersion,
+            'hits': n_hits,
+            'mediana': mediana_final,
+            'posiciones_seq': pos_elegida_por_seq
+        })
+
+    # 4. Elegir el k-mer ganador (prioridad: menor dispersión, luego más hits, luego más largo)
+    # Ordenamos por: dispersión (ascendente), hits (descendente), longitud kmer (descendente)
+    estadisticas_kmers.sort(key=lambda x: (x['dispersion'], -x['hits'], -len(x['kmer'])))
+    
+    ganador = estadisticas_kmers[0]
+    kmer_ganador = ganador['kmer']
+    mediana_ganadora = ganador['mediana']
+    
+    print(f"\n  >> K-MER GANADOR: {kmer_ganador} (Dispersión: {ganador['dispersion']:.2f}, Mediana: {mediana_ganadora:.1f})")
+    
+    # 5. Extraer regiones basadas en el k-mer ganador
+    rangos_por_secuencia = {}
+    for k, v in set_secuencias.items():
+        if k in ganador['posiciones_seq']:
+            mejor_pos = ganador['posiciones_seq'][k]
+            
+            # Límite más solidario: 20% de la longitud de la secuencia (ej. 160 pb -> 32 pb de margen)
+            limite_distancia = int(0.20 * len(v))
+            distancia = abs(mejor_pos - mediana_ganadora)
+            
+            if distancia <= limite_distancia:
+                print(rellenar(kmer_ganador, v, mejor_pos) + f"  [Distancia: {distancia:.1f}]")
+                rangos_por_secuencia[k] = (mejor_pos, mejor_pos + len(kmer_ganador))
+            else:
+                print(f"{k}: IGNORADA — La mejor coincidencia (dist {distancia:.1f}) supera margen del 20% ({limite_distancia} pb). Extrayendo a ciegas en el anclaje.")
+                inicio_ciego = int(mediana_ganadora)
+                rangos_por_secuencia[k] = (inicio_ciego, inicio_ciego + len(kmer_ganador))
+        else:
+            print(f"{k}: IGNORADA — No contiene el k-mer ganador. Extrayendo a ciegas en el anclaje.")
+            inicio_ciego = int(mediana_ganadora)
+            rangos_por_secuencia[k] = (inicio_ciego, inicio_ciego + len(kmer_ganador))
+            
     return rangos_por_secuencia
             
             
@@ -135,7 +217,7 @@ def main():
                     "S8" : "CGATCGTAGCTAACGTAGCTAGCATCGATCGTAGCTAACGTAGCTAGCTAGCATCGATCGTAGCTAACGTAGCTAGCATCGATCGTAGCTAACGTAGCTAGCTAGCATCGATCGTAGCTATACGATGACCGTAGCTAACGTAGCTAGCATCGATCGTAGCTAAC"
                     
     }
-    k_values = [18,19,25]
+    k_values = [18] #18,19,25
     
     secuencias_activas = set_secuencias2  
     
@@ -157,7 +239,7 @@ def main():
     
     # Selección automática: filtra por presencia en secuencias distintas
     # y elimina k-mers redundantes (substrings de uno más largo)
-    lista_candidatos = seleccionar_candidatos(k_values, len(secuencias_activas), umbral=0.8)
+    lista_candidatos = seleccionar_candidatos(k_values, len(secuencias_activas), umbral=1)
     
     #-------
     # pregunta 3: localizar ocurrencias
