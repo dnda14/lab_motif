@@ -270,30 +270,89 @@ def main():
     resultado_alineacion =alineacion_multiple.run_alineacion(set_regiones)
     
     #-------
-    # pregunta 6: matriz de recuecnias
+    # pregunta 6: matriz de frecuencias
     #--------
     
-    matriz_frec = {}
-    for i in resultado_alineacion:
-        for j in range(len(i)):
-            if j in matriz_frec:
-                matriz_frec[j].add(i[j])
-            else:
-                matriz_frec[j]={i[j]}
-    #print(matriz_frec)
+    print("\n" + "="*60)
+    print("  6. MATRIZ DE FRECUENCIAS POR POSICIÓN")
+    print("="*60)
     
-    for k,v in matriz_frec.items():
-        print(f"{k}\t|  {v}")
+    if not resultado_alineacion:
+        print("No hay alineación para evaluar.")
+        return
+
+    longitud_alineamiento = len(resultado_alineacion[0])
+    matriz_frecuencias = [Counter() for _ in range(longitud_alineamiento)]
     
-    #----------
-    # pregunta  7: secuencia consenso
-    #--------
-    consenso=""
-    for v in matriz_frec.values():
-        consenso+=''.join(['[']+list(v)+[']']if len(list(v))>1 else v)
-    print(consenso)
+    for seq in resultado_alineacion:
+        for j in range(longitud_alineamiento):
+            matriz_frecuencias[j][seq[j]] += 1
+            
+    # Imprimir matriz (A, C, G, T, -)
+    bases = ['A', 'C', 'G', 'T', '-']
+    header_bases = "".join([f"{b:>5}" for b in bases])
+    print(f"{'Pos':>5} | {header_bases}")
+    print("-" * 40)
+    for j, conteos in enumerate(matriz_frecuencias):
+        fila_conteos = "".join([f"{conteos.get(b, 0):>5}" for b in bases])
+        print(f"{j:>5} | {fila_conteos}")
         
+    #-------
+    # pregunta 7 & 8: secuencia consenso y grado de conservación
+    #--------
+    print("\n" + "="*60)
+    print("  7 & 8. SECUENCIA CONSENSO Y GRADO DE CONSERVACIÓN")
+    print("="*60)
     
+    consenso = ""
+    posiciones_conservadas = []
+    posiciones_variables = []
+    total_secuencias = len(resultado_alineacion)
     
+    for j, conteos in enumerate(matriz_frecuencias):
+        bases_obs = [b for b, c in conteos.items() if c > 0]
+        
+        # Representación del consenso con la notación de corchetes del usuario
+        if len(bases_obs) > 1:
+            base_repr = f"[{''.join(sorted(bases_obs))}]"
+        else:
+            base_repr = bases_obs[0]
+            
+        consenso += base_repr
+        
+        # Seleccionar el nucleótido más frecuente para estadísticas
+        base_mas_frecuente = conteos.most_common(1)[0]
+        frecuencia_max = base_mas_frecuente[1]
+        
+        # Calcular porcentaje de conservación
+        porcentaje = (frecuencia_max / total_secuencias) * 100
+        
+        if porcentaje == 100.0 and bases_obs[0] != '-':
+            posiciones_conservadas.append(j)
+            tipo = "Totalmente conservada (100%)"
+        else:
+            posiciones_variables.append((j, bases_obs))
+            tipo = f"Variable {bases_obs} ({porcentaje:.1f}%)"
+            
+        print(f"  Pos {j:>2}: {base_repr:>5}  --> {tipo}")
+        
+    conservacion_global = (len(posiciones_conservadas) / longitud_alineamiento) * 100
+    
+    #-------
+    # pregunta 9: Reporte final
+    #--------
+    print("\n" + "="*60)
+    print("  9. REPORTE FINAL DEL MOTIF ENCONTRADO")
+    print("="*60)
+    print(f"  Longitud del motif: {longitud_alineamiento} posiciones")
+    print(f"  Secuencia consenso: {consenso}")
+    print(f"  Porcentaje global de conservación: {conservacion_global:.1f}%")
+    print(f"  Número de secuencias que contienen el motif: {total_secuencias}")
+    print("\n  Posición de aparición en cada secuencia:")
+    for k, v in secuencias_activas.items():
+        if k in rangos:
+            i_seq, f_seq = rangos[k]
+            print(f"    {k}: [{i_seq}:{f_seq}]")
+
 if __name__ == "__main__":
     main()
